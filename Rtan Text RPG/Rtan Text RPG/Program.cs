@@ -3,12 +3,15 @@ using System.Runtime.Serialization.Formatters;
 using System.Collections.Generic;
 using static System.Formats.Asn1.AsnWriter;
 using System.Security.Cryptography.X509Certificates;
+using System.Xml.Linq;
 
 namespace Rtan_Text_RPG
 {
     internal class Program
     {
-        private static Character player;
+        static Character _player;
+        static Item[] _items;
+
         static void Main(string[] args)
         {
             string playerName = WhenGameStart();
@@ -51,6 +54,7 @@ namespace Rtan_Text_RPG
                     }
                     else if (nameAnswer == 2)
                     {
+                        Console.Clear();
                         Console.WriteLine("그럼 이름을 \"모험가\"로 저장할게요. ");
                         playerName = "모험가";
                         answerCheck = true;
@@ -63,6 +67,7 @@ namespace Rtan_Text_RPG
                     }
                 }
             }
+            Thread.Sleep(1000);
             Console.Clear();
             Console.WriteLine("모험가 정보 등록중");
             Console.WriteLine("......");
@@ -87,7 +92,7 @@ namespace Rtan_Text_RPG
                     else if (readyAnswer == 2)
                     {
                         ++answerCount;
-                        if (answerCount <= 5)
+                        if (answerCount <= 3)
                         {
                             Console.Clear();
                             Console.WriteLine("......");
@@ -156,34 +161,47 @@ namespace Rtan_Text_RPG
         static void GameDataSetting(string playerName)
         {
             // 캐릭터 정보 세팅
-            player = new Character($"{playerName}", "전사", 1, 10, 5, 100, 1500);
+            _player = new Character($"{playerName}", "전사", 1, 10, 5, 100, 1500);
 
             // 아이템 정보 세팅
+            _items = new Item[10];
+            AddItem(new Item("무쇠 갑옷", "무쇠로 만든 갑옷", 0, 0, 3, 0));
+            AddItem(new Item("낡은 철검", "오래써서 낡은 철 검", 1, 2, 0, 0));
+            AddItem(new Item("철 갑옷", "흔한 철 갑옷", 0, 0, 5, 0));
+            AddItem(new Item("철 검", "흔한 철 검", 1, 5, 0, 0));
+            AddItem(new Item("활력의 갑옷", "약간의 HP를 올려주는 갑옷", 0, 0, 3, 5));
+            AddItem(new Item("게임 끝", "게임을 끝내고 싶을 때 쓰는거", 3, 100, 100, 100));
         }
         static void DisplayMyInfo(string playerName)
         {
             Console.Clear();
+
             Console.BackgroundColor = ConsoleColor.DarkMagenta;
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("상태보기");
             Console.ResetColor();
             Console.WriteLine("캐릭터의 정보를 표시합니다.");
-            Console.ResetColor();
             Console.WriteLine();
-            Console.BackgroundColor = ConsoleColor.DarkGray;
+
             ConsoleColor originalColor = Console.ForegroundColor;
-            Console.ForegroundColor = GetLevelColor(player.Level);
-            Console.WriteLine($"Lv.{player.Level}");
+            Console.ForegroundColor = GetLevelColor(_player.Level);
+            Console.WriteLine($"Lv.{_player.Level}");
             Console.ForegroundColor = originalColor;
-            Console.WriteLine($"{player.Name}({player.Job})");
-            Console.WriteLine($"공격력 :{player.Atk}");
-            Console.WriteLine($"방어력 : {player.Def}");
-            Console.WriteLine($"체력 : {player.Hp}");
-            Console.WriteLine($"Gold : {player.Gold} G");
+            Console.WriteLine($"{_player.Name}({_player.Job})");
+            int bonusAtk = getSumBonusAtk();
+            Console.WriteLine($"공격력 : {_player.Atk + bonusAtk}");
+            int bonusDef = getSumBonusDef();
+            Console.WriteLine($"방어력 : {_player.Def + bonusDef}");
+            int bonusHp = getSumBonusHp();
+            Console.WriteLine($"체력 : {_player.Hp + bonusHp}");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Gold : {_player.Gold} G");
             Console.ResetColor();
+
             Console.WriteLine();
             Console.WriteLine("0.나가기");
             Console.WriteLine("1.이름 바꾸기");
+
             Console.Write("입력해 주세요:");
 
             int input = CheckValidInput(0, 1);
@@ -196,14 +214,43 @@ namespace Rtan_Text_RPG
                 case 1:
                     Console.Write("이름을 입력해 주세요:");
                     playerName = Console.ReadLine();
-                    player = new Character($"{playerName}", "전사", 1, 10, 5, 100, 1500);
+                    _player = new Character($"{playerName}", "전사", 1, 10, 5, 100, 1500);
                     DisplayMyInfo(playerName);
                     break;
             }
         }
+        private static int getSumBonusAtk()
+        {
+            int sum = 0;
+            for (int i = 0; i < Item.ItemCnt; i++)
+            {
+                if (_items[i].IsEquiped) sum += _items[i].Atk;
+            }
+            return sum;
+        }
+
+        private static int getSumBonusDef()
+        {
+            int sum = 0;
+            for (int i = 0; i < Item.ItemCnt; i++)
+            {
+                if (_items[i].IsEquiped) sum += _items[i].Def;
+            }
+            return sum;
+        }
+
+        private static int getSumBonusHp()
+        {
+            int sum = 0;
+            for (int i = 0; i < Item.ItemCnt; i++)
+            {
+                if (_items[i].IsEquiped) sum += _items[i].Hp;
+            }
+            return sum;
+        }
         static ConsoleColor GetLevelColor(int level)
         {
-            return (level <= 10) ? ConsoleColor.Yellow : (level <= 50) ? ConsoleColor.Green : (level <= 100) ? ConsoleColor.Red : ConsoleColor.Black;
+            return (level <= 10) ? ConsoleColor.DarkGray : (level <= 20) ? ConsoleColor.Yellow : (level <= 30) ? ConsoleColor.DarkRed : (level <= 40) ? ConsoleColor.Green : (level <= 50) ? ConsoleColor.Blue : (level <= 60) ? ConsoleColor.Magenta : (level <= 70) ? ConsoleColor.DarkYellow : (level <= 80) ? ConsoleColor.Red : (level <= 90) ? ConsoleColor.Black : ConsoleColor.White;
         }
 
         static void DisplayInventory(string playerName)
@@ -216,7 +263,10 @@ namespace Rtan_Text_RPG
             Console.WriteLine();
             Console.WriteLine("[아이템 목록]");
             Console.WriteLine("\n");
-            Item itemInstance = new Item();
+            for (int i = 0; i < Item.ItemCnt; i++)
+            {
+                _items[i].PrintItemStatDescription();
+            }
             Console.WriteLine("\n");
             Console.WriteLine("1. 장착 관리");
             Console.WriteLine("0. 나가기");
@@ -245,26 +295,38 @@ namespace Rtan_Text_RPG
             Console.WriteLine();
             Console.WriteLine("[아이템 목록]");
             Console.WriteLine("\n");
-            Item itemInstance = new Item();
+            for (int i = 0; i < Item.ItemCnt; i++)
+            {
+                _items[i].PrintItemStatDescription(true, i + 1); // 1, 2, 3에 매핑하기 위해 +1
+            }
             Console.WriteLine("\n");
             Console.WriteLine("0. 나가기");
             Console.WriteLine();
             Console.Write("입력해 주세요:");
-            int input = CheckValidInput(0, 2);
-            switch (input)
+            int keyInput = CheckValidInput(0, Item.ItemCnt);
+
+            switch (keyInput)
             {
                 case 0:
-                    DisplayInventory(playerName);
+                    DisplayInventory(playerName);                    
                     break;
-                case 1:
-                    break;
-                case 2:
-                    
+                default:
+                    ToggleEquipStatus(keyInput - 1); // 유저가 입력하는건 1, 2, 3 : 실제 배열에는 0, 1, 2...
+                    ManagementInventory(playerName);                   
                     break;
             }
         }
-
-            static int CheckValidInput(int min, int max)
+        static void AddItem(Item item)
+        {
+            if (Item.ItemCnt == 10) return;
+            _items[Item.ItemCnt] = item;
+            Item.ItemCnt++;
+        }
+        static void ToggleEquipStatus(int idx)
+        {
+            _items[idx].IsEquiped = !_items[idx].IsEquiped;
+        }
+        static int CheckValidInput(int min, int max)
         {
             while (true)
             {
@@ -308,15 +370,88 @@ namespace Rtan_Text_RPG
     }
     public class Item
     {
-        public Item()
+        public string Name { get; }
+        public string Description { get; }
+
+        // 개선포인트 : Enum 활용
+        public int Type { get; }
+
+        public int Atk { get; }
+        public int Def { get; }
+        public int Hp { get; }
+
+
+        public bool IsEquiped { get; set; }
+
+        public static int ItemCnt = 0;
+
+        public Item(string name, string description, int type, int atk, int def, int hp, bool isEquiped = false)
         {
-            int num = 1;
-            string[] inventory = {"무쇠갑옷(방어력 +5)", "낡은 검(공격력 +2)"};
-            foreach (string item in inventory)
-            {
-                Console.WriteLine("-("+$"{num}"+")"+item);
-                    num++;
-            }
+            Name = name;
+            Description = description;
+            Type = type;
+            Atk = atk;
+            Def = def;
+            Hp = hp;
+            IsEquiped = isEquiped;
         }
+
+        public void PrintItemStatDescription(bool withNumber = false, int idx = 0)
+        {
+            Console.Write("- ");
+            // 장착관리 전용
+            if (withNumber)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                Console.Write("{0} ", idx);
+                Console.ResetColor();
+            }
+            if (IsEquiped)
+            {
+                Console.Write("[");
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.Write("E");
+                Console.ResetColor();
+                Console.Write("]");
+                Console.Write(PadRightForMixedText(Name, 9));
+            }
+            else Console.Write(PadRightForMixedText(Name, 12));
+
+            Console.Write(" | ");
+
+            if (Atk != 0) Console.Write($"Atk {(Atk >= 0 ? "+" : "")}{Atk} ");
+            if (Def != 0) Console.Write($"Def {(Def >= 0 ? "+" : "")}{Def} ");
+            if (Hp != 0) Console.Write($"Hp {(Hp >= 0 ? "+" : "")}{Hp}");
+
+            Console.Write(" | ");
+
+            Console.WriteLine(Description);
+        }
+
+        public static int GetPrintableLength(string str)
+        {
+            int length = 0;
+            foreach (char c in str)
+            {
+                if (char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.OtherLetter)
+                {
+                    length += 2; // 한글과 같은 넓은 문자에 대해 길이를 2로 취급
+                }
+                else
+                {
+                    length += 1; // 나머지 문자에 대해 길이를 1로 취급
+                }
+            }
+
+            return length;
+        }
+
+        public static string PadRightForMixedText(string str, int totalLength)
+        {
+            int currentLength = GetPrintableLength(str);
+            int padding = totalLength - currentLength;
+            return str.PadRight(str.Length + padding);
+        }
+
     }
 }
